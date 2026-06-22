@@ -29,11 +29,13 @@ CREATE TABLE IF NOT EXISTS inspirapos_v1.clients (
   address TEXT,
   phone VARCHAR(30),
   device_id VARCHAR(100) UNIQUE NOT NULL,
-  license_status VARCHAR(20) DEFAULT 'TRIAL'::character varying NOT NULL, -- 'TRIAL', 'ACTIVE', 'EXPIRED'
+  license_status VARCHAR(20) DEFAULT 'TRIAL'::character varying NOT NULL, -- 'TRIAL', 'ACTIVE', 'EXPIRED', 'REVOKED'
   trial_started_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   license_key VARCHAR(50),
+  plan_tier VARCHAR(10) DEFAULT 'LITE' NOT NULL, -- 'LITE', 'PRO'
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  CONSTRAINT clients_license_status_check CHECK (license_status IN ('TRIAL', 'ACTIVE', 'EXPIRED', 'REVOKED'))
+  CONSTRAINT clients_license_status_check CHECK (license_status IN ('TRIAL', 'ACTIVE', 'EXPIRED', 'REVOKED')),
+  CONSTRAINT clients_plan_tier_check CHECK (plan_tier IN ('LITE', 'PRO'))
 );
 
 -- 5. Tabel license_logs (Untuk Log Penerbitan Lisensi oleh Admin)
@@ -41,6 +43,7 @@ CREATE TABLE IF NOT EXISTS inspirapos_v1.license_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   client_id UUID REFERENCES inspirapos_v1.clients(id) ON DELETE CASCADE NOT NULL,
   license_key VARCHAR(50) NOT NULL,
+  plan_tier VARCHAR(10) DEFAULT 'LITE' NOT NULL,
   generated_by UUID REFERENCES inspirapos_v1.admins(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -63,3 +66,19 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA inspirapos_v1 GRANT ALL ON TABLES TO anon, au
 ALTER DEFAULT PRIVILEGES IN SCHEMA inspirapos_v1 GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA inspirapos_v1 GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
 
+-- ======================================================
+-- SCRIPT MIGRATION: LITE & PRO TIERS (JUNI 2026)
+-- ======================================================
+-- Jalankan skrip ini di database yang sudah ada untuk memperbarui skema:
+--
+-- ALTER TABLE inspirapos_v1.clients 
+-- ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(10) DEFAULT 'LITE' NOT NULL
+-- CONSTRAINT clients_plan_tier_check CHECK (plan_tier IN ('LITE', 'PRO'));
+--
+-- ALTER TABLE inspirapos_v1.license_logs 
+-- ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(10) DEFAULT 'LITE' NOT NULL;
+--
+-- -- Migrasi klien ACTIVE lama agar otomatis menjadi PRO
+-- UPDATE inspirapos_v1.clients
+-- SET plan_tier = 'PRO'
+-- WHERE license_status = 'ACTIVE';

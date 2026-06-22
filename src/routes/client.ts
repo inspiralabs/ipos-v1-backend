@@ -107,6 +107,7 @@ export default async function clientRoutes(fastify: FastifyInstance, options: Fa
         licenseStatus,
         trialDaysLeft,
         licenseKey: client.license_key,
+        planTier: client.plan_tier || 'LITE',
       });
     } catch (err: any) {
       return reply.status(500).send({ error: 'Terjadi kesalahan sistem.', details: err.message });

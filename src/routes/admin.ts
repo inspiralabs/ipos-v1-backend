@@ -88,7 +88,7 @@ export default async function adminRoutes(fastify: FastifyInstance, options: Fas
 
   // Generate License for Client
   fastify.post('/clients/generate-license', async (request, reply) => {
-    const { clientId } = request.body as { clientId?: string };
+    const { clientId, planTier = 'LITE' } = request.body as { clientId?: string; planTier?: 'LITE' | 'PRO' };
 
     if (!clientId) {
       return reply.status(400).send({ error: 'clientId wajib disertakan.' });
@@ -107,7 +107,7 @@ export default async function adminRoutes(fastify: FastifyInstance, options: Fas
       }
 
       // 2. Generate license key
-      const licenseKey = generateLicenseKey(client.store_name, client.device_id);
+      const licenseKey = generateLicenseKey(client.device_id, planTier);
 
       // 3. Update client in Supabase
       const { error: updateError } = await supabase
@@ -115,6 +115,7 @@ export default async function adminRoutes(fastify: FastifyInstance, options: Fas
         .update({
           license_status: 'ACTIVE',
           license_key: licenseKey,
+          plan_tier: planTier,
         })
         .eq('id', clientId);
 
@@ -130,9 +131,10 @@ export default async function adminRoutes(fastify: FastifyInstance, options: Fas
           client_id: clientId,
           license_key: licenseKey,
           generated_by: adminUser.id,
+          plan_tier: planTier,
         });
 
-      return reply.send({ success: true, licenseKey, storeName: client.store_name });
+      return reply.send({ success: true, licenseKey, planTier, storeName: client.store_name });
     } catch (err: any) {
       return reply.status(500).send({ error: 'Terjadi kesalahan sistem.', details: err.message });
     }
