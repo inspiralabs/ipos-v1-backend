@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS inspirapos_v1.clients (
   trial_started_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   license_key VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  CONSTRAINT clients_license_status_check CHECK (license_status IN ('TRIAL', 'ACTIVE', 'EXPIRED'))
+  CONSTRAINT clients_license_status_check CHECK (license_status IN ('TRIAL', 'ACTIVE', 'EXPIRED', 'REVOKED'))
 );
 
 -- 5. Tabel license_logs (Untuk Log Penerbitan Lisensi oleh Admin)

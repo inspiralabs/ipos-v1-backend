@@ -246,4 +246,53 @@ export default async function adminRoutes(fastify: FastifyInstance, options: Fas
       return reply.status(500).send({ error: 'Terjadi kesalahan sistem.', details: err.message });
     }
   });
+
+  // Deactivate Client (soft delete / non-aktifkan)
+  fastify.post('/clients/:id/deactivate', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    try {
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({
+          license_status: 'REVOKED'
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        return reply.status(500).send({ error: 'Gagal menonaktifkan klien.', details: updateError.message });
+      }
+
+      return reply.send({ success: true, message: 'Klien berhasil dinonaktifkan.' });
+    } catch (err: any) {
+      return reply.status(500).send({ error: 'Terjadi kesalahan sistem.', details: err.message });
+    }
+  });
+
+  // Delete Client
+  fastify.delete('/clients/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    try {
+      // 1. Hapus license logs terlebih dahulu untuk menghindari constraint FK jika ada
+      await supabase
+        .from('license_logs')
+        .delete()
+        .eq('client_id', id);
+
+      // 2. Hapus data klien
+      const { error: deleteError } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) {
+        return reply.status(500).send({ error: 'Gagal menghapus data klien.', details: deleteError.message });
+      }
+
+      return reply.send({ success: true, message: 'Klien berhasil dihapus.' });
+    } catch (err: any) {
+      return reply.status(500).send({ error: 'Terjadi kesalahan sistem.', details: err.message });
+    }
+  });
 }
